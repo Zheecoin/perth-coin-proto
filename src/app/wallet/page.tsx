@@ -62,11 +62,8 @@ export default function ZheeCoin() {
       if (typeof json.zheeUSD === 'number') targetUSD.current = json.zheeUSD
       if (typeof json.zheeAUD === 'number') targetAUD.current = json.zheeAUD
 
-      // Flash the pulse dot
       setPulse(true)
       setTimeout(() => setPulse(false), 600)
-
-      // Update last updated time and count
       setLastUpdated(new Date().toLocaleTimeString())
       setUpdateCount(c => c + 1)
 
@@ -84,12 +81,21 @@ export default function ZheeCoin() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-6 md:p-12 font-mono">
+    <div
+      className="min-h-screen text-white p-6 md:p-12 font-mono"
+      style={{
+        backgroundImage: 'url(/background.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }}
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-10">
         <div>
           <h1 className="text-4xl font-bold tracking-tight text-white">Ƶ Zhee Coin</h1>
-          <p className="text-gray-400 mt-1 text-sm">
+          <p className="text-white/70 mt-1 text-sm">
             Weighted basket of global currencies &amp; commodities
           </p>
         </div>
@@ -97,7 +103,7 @@ export default function ZheeCoin() {
         {/* Live indicator */}
         <div className="flex flex-col items-end gap-1 mt-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">LIVE</span>
+            <span className="text-xs text-white/70">LIVE</span>
             <span
               className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
                 pulse ? 'bg-green-400 scale-125 shadow-lg shadow-green-400/50' : 'bg-green-600'
@@ -105,30 +111,26 @@ export default function ZheeCoin() {
             />
           </div>
           {lastUpdated && (
-            <span className="text-xs text-gray-600">
-              Last: {lastUpdated}
-            </span>
+            <span className="text-xs text-white/50">Last: {lastUpdated}</span>
           )}
           {updateCount > 0 && (
-            <span className="text-xs text-gray-700">
-              #{updateCount} updates
-            </span>
+            <span className="text-xs text-white/30">#{updateCount} updates</span>
           )}
         </div>
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-900/40 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm">
+        <div className="mb-6 bg-red-900/60 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm">
           ⚠ {error}
         </div>
       )}
 
       {/* Price cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-        <div className={`bg-gray-900 border rounded-xl p-6 transition-all duration-300 ${pulse ? 'border-green-700' : 'border-gray-800'}`}>
-          <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">1 Zhee in USD</p>
+        <div className={`bg-black/50 backdrop-blur-sm border rounded-xl p-6 transition-all duration-300 ${pulse ? 'border-green-700' : 'border-white/20'}`}>
+          <p className="text-white/60 text-xs uppercase tracking-widest mb-1">1 Zhee in USD</p>
           {loading ? (
-            <div className="h-10 bg-gray-800 rounded animate-pulse w-40" />
+            <div className="h-10 bg-white/10 rounded animate-pulse w-40" />
           ) : (
             <p className="text-4xl font-bold text-green-400">
               ${displayUSD.toFixed(6)}
@@ -136,10 +138,10 @@ export default function ZheeCoin() {
           )}
         </div>
 
-        <div className={`bg-gray-900 border rounded-xl p-6 transition-all duration-300 ${pulse ? 'border-blue-700' : 'border-gray-800'}`}>
-          <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">1 Zhee in AUD</p>
+        <div className={`bg-black/50 backdrop-blur-sm border rounded-xl p-6 transition-all duration-300 ${pulse ? 'border-blue-700' : 'border-white/20'}`}>
+          <p className="text-white/60 text-xs uppercase tracking-widest mb-1">1 Zhee in AUD</p>
           {loading ? (
-            <div className="h-10 bg-gray-800 rounded animate-pulse w-40" />
+            <div className="h-10 bg-white/10 rounded animate-pulse w-40" />
           ) : (
             <p className="text-4xl font-bold text-blue-400">
               A${displayAUD.toFixed(6)}
@@ -149,22 +151,22 @@ export default function ZheeCoin() {
       </div>
 
       {/* Breakdown table */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
-          <h2 className="text-sm uppercase tracking-widest text-gray-400">Basket Breakdown</h2>
-          <span className="text-xs text-gray-600">metals refresh every 2s · currencies cached 1hr</span>
+      <div className="bg-black/50 backdrop-blur-sm border border-white/20 rounded-xl overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+          <h2 className="text-sm uppercase tracking-widest text-white/60">Basket Breakdown</h2>
+          <span className="text-xs text-white/30">metals refresh every 2s · currencies cached 1hr</span>
         </div>
 
         {loading ? (
           <div className="p-6 space-y-3">
             {Array.from({ length: 9 }).map((_, i) => (
-              <div key={i} className="h-6 bg-gray-800 rounded animate-pulse" />
+              <div key={i} className="h-6 bg-white/10 rounded animate-pulse" />
             ))}
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-gray-500 text-xs border-b border-gray-800">
+              <tr className="text-white/40 text-xs border-b border-white/10">
                 <th className="text-left px-6 py-3">Asset</th>
                 <th className="text-right px-6 py-3">Weight</th>
                 <th className="text-right px-6 py-3">Rate (USD)</th>
@@ -175,18 +177,18 @@ export default function ZheeCoin() {
               {data?.breakdown.map((item, i) => (
                 <tr
                   key={item.name}
-                  className={`border-b border-gray-800/50 ${i % 2 === 0 ? 'bg-gray-900' : 'bg-gray-900/60'}`}
+                  className={`border-b border-white/10 ${i % 2 === 0 ? 'bg-white/5' : 'bg-transparent'}`}
                 >
                   <td className="px-6 py-3 font-semibold text-white flex items-center gap-2">
                     {item.name}
                     {item.name.includes('XA') && (
-                      <span className="text-xs text-green-500 font-normal">live</span>
+                      <span className="text-xs text-green-400 font-normal">live</span>
                     )}
                   </td>
-                  <td className="px-6 py-3 text-right text-gray-300">
+                  <td className="px-6 py-3 text-right text-white/60">
                     {(item.weight * 100).toFixed(1)}%
                   </td>
-                  <td className="px-6 py-3 text-right text-gray-300">
+                  <td className="px-6 py-3 text-right text-white/60">
                     {typeof item.usdRate === 'number'
                       ? item.name.includes('XA')
                         ? item.usdRate.toFixed(4)
@@ -203,7 +205,7 @@ export default function ZheeCoin() {
             </tbody>
             {data?.zheeUSD && (
               <tfoot>
-                <tr className="border-t-2 border-gray-700 bg-gray-800/50">
+                <tr className="border-t-2 border-white/20 bg-white/10">
                   <td colSpan={3} className="px-6 py-3 font-bold text-white">Total (1 Zhee)</td>
                   <td className="px-6 py-3 text-right font-bold text-green-400">
                     ${data.zheeUSD.toFixed(6)}
@@ -215,7 +217,7 @@ export default function ZheeCoin() {
         )}
       </div>
 
-      <div className="flex items-center justify-between text-xs text-gray-600">
+      <div className="flex items-center justify-between text-xs text-white/30">
         <span>Metals: gold-api.com · Currencies: ExchangeRate-API</span>
         {lastUpdated && <span>Last fetch: {lastUpdated}</span>}
       </div>
