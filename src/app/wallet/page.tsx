@@ -1,85 +1,223 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { useEffect, useState, useRef } from 'react'
 
-type BasketData = {
+interface BreakdownItem {
   name: string
-  value: number
+  weight: number
+  usdRate: number
+  contribution: number
 }
 
-// Fallback basket data in case API fails
-const fallbackData: BasketData[] = [
-  { name: 'USD', value: 0.375 },
-  { name: 'EUR', value: 0.21 },
-  { name: 'JPY', value: 0.09 },
-  { name: 'CNY', value: 0.09 },
-  { name: 'GBP', value: 0.05 },
-  { name: 'AUD', value: 0.045 },
-  { name: 'THB', value: 0.015 },
-  { name: 'Gold', value: 0.09 },
-  { name: 'Silver', value: 0.025 },
-]
+interface BasketData {
+  zheeUSD: number | null
+  zheeAUD: number | null
+  breakdown: BreakdownItem[]
+  timestamp?: number
+  error?: string
+}
 
-export default function Wallet() {
-  const [balance, setBalance] = useState(1000)
-  const [basketValue, setBasketValue] = useState<number>(
-    fallbackData.reduce((sum, item) => sum + item.value, 0)
-  )
-  const [basketChart, setBasketChart] = useState<BasketData[]>(fallbackData)
+export default function ZheeCoin() {
+  const [data, setData] = useState<BasketData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [pulse, setPulse] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+  const [updateCount, setUpdateCount] = useState(0)
+
+  const [displayUSD, setDisplayUSD] = useState(0)
+  const [displayAUD, setDisplayAUD] = useState(0)
+  const animRef = useRef<number | null>(null)
+  const targetUSD = useRef(0)
+  const targetAUD = useRef(0)
 
   useEffect(() => {
-    const fetchBasket = async () => {
-      try {
-        const res = await fetch('/api/basket')
-        const data = await res.json()
-
-        if (data?.basket && data?.breakdown?.length) {
-          setBasketValue(data.basket)
-          setBasketChart(data.breakdown)
-        } else {
-          console.warn('Basket API returned no data, using fallback')
-        }
-      } catch (err) {
-        console.error('Basket fetch failed, using fallback', err)
-      }
+    const animate = () => {
+      setDisplayUSD(prev => {
+        const diff = targetUSD.current - prev
+        return Math.abs(diff) < 0.000001 ? targetUSD.current : prev + diff * 0.08
+      })
+      setDisplayAUD(prev => {
+        const diff = targetAUD.current - prev
+        return Math.abs(diff) < 0.000001 ? targetAUD.current : prev + diff * 0.08
+      })
+      animRef.current = requestAnimationFrame(animate)
     }
+    animRef.current = requestAnimationFrame(animate)
+    return () => {
+      if (animRef.current) cancelAnimationFrame(animRef.current)
+    }
+  }, [])
 
-    fetchBasket()
-    const interval = setInterval(fetchBasket, 60000) // refresh every minute
+  const fetchData = async () => {
+    try {
+      const res = await fetch('/api/basket', { cache: 'no-store' })
+      const json: BasketData = await res.json()
 
+      if (!res.ok || json.error) throw new Error(json.error ?? 'Unknown error')
+
+      setData(json)
+      setError(null)
+
+      if (typeof json.zheeUSD === 'number') targetUSD.current = json.zheeUSD
+      if (typeof json.zheeAUD === 'number') targetAUD.current = json.zheeAUD
+
+      // Flash the pulse dot
+      setPulse(true)
+      setTimeout(() => setPulse(false), 600)
+
+      // Update last updated time and count
+      setLastUpdated(new Date().toLocaleTimeString())
+      setUpdateCount(c => c + 1)
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+    const interval = setInterval(fetchData, 2000)
     return () => clearInterval(interval)
   }, [])
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Your PerthCoin Wallet</h1>
+    <div className="min-h-screen bg-gray-950 text-white p-6 md:p-12 font-mono">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-10">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight text-white">Ƶ Zhee Coin</h1>
+          <p className="text-gray-400 mt-1 text-sm">
+            Weighted basket of global currencies &amp; commodities
+          </p>
+        </div>
 
-      <div className="bg-gray-100 p-6 rounded-lg shadow mb-6">
-        <p className="text-xl">
-          Balance: <span className="font-bold">{balance.toLocaleString()} coins</span>
-        </p>
-
-        <p className="mt-4">
-          Current basket value:{' '}
-          <span className="font-bold">${basketValue.toFixed(4)}</span> (updates live)
-        </p>
-
-        <p className="mt-2 text-sm text-gray-600">
-          Your coins track this weighted basket of currencies & metals
-        </p>
+        {/* Live indicator */}
+        <div className="flex flex-col items-end gap-1 mt-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">LIVE</span>
+            <span
+              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                pulse ? 'bg-green-400 scale-125 shadow-lg shadow-green-400/50' : 'bg-green-600'
+              }`}
+            />
+          </div>
+          {lastUpdated && (
+            <span className="text-xs text-gray-600">
+              Last: {lastUpdated}
+            </span>
+          )}
+          {updateCount > 0 && (
+            <span className="text-xs text-gray-700">
+              #{updateCount} updates
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className="bg-gray-50 p-6 rounded-lg shadow">
-        <h2 className="text-2xl font-semibold mb-4">Basket Composition</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={basketChart}>
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="value" fill="#f59e0b" />
-          </BarChart>
-        </ResponsiveContainer>
+      {error && (
+        <div className="mb-6 bg-red-900/40 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm">
+          ⚠ {error}
+        </div>
+      )}
+
+      {/* Price cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+        <div className={`bg-gray-900 border rounded-xl p-6 transition-all duration-300 ${pulse ? 'border-green-700' : 'border-gray-800'}`}>
+          <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">1 Zhee in USD</p>
+          {loading ? (
+            <div className="h-10 bg-gray-800 rounded animate-pulse w-40" />
+          ) : (
+            <p className="text-4xl font-bold text-green-400">
+              ${displayUSD.toFixed(6)}
+            </p>
+          )}
+        </div>
+
+        <div className={`bg-gray-900 border rounded-xl p-6 transition-all duration-300 ${pulse ? 'border-blue-700' : 'border-gray-800'}`}>
+          <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">1 Zhee in AUD</p>
+          {loading ? (
+            <div className="h-10 bg-gray-800 rounded animate-pulse w-40" />
+          ) : (
+            <p className="text-4xl font-bold text-blue-400">
+              A${displayAUD.toFixed(6)}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Breakdown table */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+          <h2 className="text-sm uppercase tracking-widest text-gray-400">Basket Breakdown</h2>
+          <span className="text-xs text-gray-600">metals refresh every 2s · currencies cached 1hr</span>
+        </div>
+
+        {loading ? (
+          <div className="p-6 space-y-3">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <div key={i} className="h-6 bg-gray-800 rounded animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-gray-500 text-xs border-b border-gray-800">
+                <th className="text-left px-6 py-3">Asset</th>
+                <th className="text-right px-6 py-3">Weight</th>
+                <th className="text-right px-6 py-3">Rate (USD)</th>
+                <th className="text-right px-6 py-3">Contribution</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data?.breakdown.map((item, i) => (
+                <tr
+                  key={item.name}
+                  className={`border-b border-gray-800/50 ${i % 2 === 0 ? 'bg-gray-900' : 'bg-gray-900/60'}`}
+                >
+                  <td className="px-6 py-3 font-semibold text-white flex items-center gap-2">
+                    {item.name}
+                    {item.name.includes('XA') && (
+                      <span className="text-xs text-green-500 font-normal">live</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3 text-right text-gray-300">
+                    {(item.weight * 100).toFixed(1)}%
+                  </td>
+                  <td className="px-6 py-3 text-right text-gray-300">
+                    {typeof item.usdRate === 'number'
+                      ? item.name.includes('XA')
+                        ? item.usdRate.toFixed(4)
+                        : item.usdRate.toFixed(6)
+                      : '—'}
+                  </td>
+                  <td className="px-6 py-3 text-right text-green-400 font-semibold">
+                    {typeof item.contribution === 'number'
+                      ? `$${item.contribution.toFixed(6)}`
+                      : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            {data?.zheeUSD && (
+              <tfoot>
+                <tr className="border-t-2 border-gray-700 bg-gray-800/50">
+                  <td colSpan={3} className="px-6 py-3 font-bold text-white">Total (1 Zhee)</td>
+                  <td className="px-6 py-3 text-right font-bold text-green-400">
+                    ${data.zheeUSD.toFixed(6)}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-gray-600">
+        <span>Metals: gold-api.com · Currencies: ExchangeRate-API</span>
+        {lastUpdated && <span>Last fetch: {lastUpdated}</span>}
       </div>
     </div>
   )
