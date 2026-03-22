@@ -19,23 +19,19 @@ const METAL_BASELINES = {
 
 export async function GET() {
   try {
-    const exchangeKey = process.env.EXCHANGERATE_KEY
-    if (!exchangeKey) throw new Error('Missing EXCHANGERATE_KEY')
-
-    // Currency fetch uses Next.js built-in cache with 1 hour revalidation.
-    // Unlike in-memory caching, this works correctly on Vercel serverless
-    // because Next.js persists the fetch cache between function invocations.
-    // ExchangeRate-API free plan = 1,500 requests/month — this keeps usage to ~720/month max.
+    // Frankfurter: free, no key, no rate limits, ECB data
+    // Returns rates relative to EUR by default, so we use /latest?from=USD
+    // Response: { base: "USD", rates: { EUR: 0.91, JPY: 149.5, ... } }
     const [currencyRes, goldRes, silverRes] = await Promise.all([
       fetch(
-        `https://v6.exchangerate-api.com/v6/${exchangeKey}/latest/USD`,
-        { next: { revalidate: 3600 } }  // cache for 1 hour
+        'https://api.frankfurter.dev/v1/latest?base=USD&symbols=EUR,JPY,CNY,GBP,AUD,THB',
+        { next: { revalidate: 3600 } }
       ),
       fetch('https://api.gold-api.com/price/XAU', { cache: 'no-store' }),
       fetch('https://api.gold-api.com/price/XAG', { cache: 'no-store' }),
     ])
 
-    if (!currencyRes.ok) throw new Error(`ExchangeRate-API error: ${currencyRes.status} ${currencyRes.statusText}`)
+    if (!currencyRes.ok) throw new Error(`Frankfurter error: ${currencyRes.status} ${currencyRes.statusText}`)
     if (!goldRes.ok) throw new Error(`Gold-API XAU error: ${goldRes.status} ${goldRes.statusText}`)
     if (!silverRes.ok) throw new Error(`Gold-API XAG error: ${silverRes.status} ${silverRes.statusText}`)
 
@@ -43,7 +39,8 @@ export async function GET() {
     const goldData = await goldRes.json()
     const silverData = await silverRes.json()
 
-    const rates = currencyData.conversion_rates as Record<string, number>
+    // Frankfurter returns { base: "USD", rates: { EUR: ..., JPY: ..., } }
+    const rates = currencyData.rates as Record<string, number>
     const goldPrice: number = goldData.price
     const silverPrice: number = silverData.price
 
@@ -77,7 +74,7 @@ export async function GET() {
       zheeUSD,
       zheeAUD,
       breakdown,
-      timestamp: currencyData.time_last_update_unix,
+      timestamp: Date.now(),
     })
 
   } catch (err) {
